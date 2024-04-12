@@ -1,5 +1,6 @@
-import { useState } from "react"
-import { v4 as uuid } from "uuid"
+import { useState, useEffect } from "react"
+import api from "./api/index.js"
+//import { v4 as uuid } from "uuid"
 
 
 
@@ -10,30 +11,39 @@ function App() {
   const [list, setList] = useState([])
   const [inputTask, setInputTask] = useState('')
 
+  async function pegarTodasTarefas() {
+    const { data } = await api.get('/todos')
+    setList(data)
+  }
+
 
   function inputMudou(event) {
     setInputTask(event.target.value)
   }
 
-  function cliqueiNoBotao() {
+  async function cliqueiNoBotao() {
     if (inputTask) {
-    setList([...list, { id: uuid(), task: inputTask, finished: false }])
+      await api.post('/todos', { task: inputTask })
+      pegarTodasTarefas()
+      setInputTask("")
     }
   }
 
-  function finalizarTarefa(id) {
-    const newList = list.map((item) =>
-      item.id === id ? { ...item, finished: !item.finished } : item
-    )
-
-    setList(newList)
+  async function finalizarTarefa(id, finished) {
+    await api.patch(`/todos/${id}`, {
+      finished: !finished
+    })
+    pegarTodasTarefas()
   }
 
-  function deletarItem(id) {
-    const newList = list.filter((item) => item.id != id)
-
-    setList(newList)
+  async function deletarItem(id) {
+    await api.delete(`/todos/${id}`)
+    pegarTodasTarefas()
   }
+
+  useEffect(() => {
+    pegarTodasTarefas()
+  }, [])
 
   return (
     <Container>
@@ -44,10 +54,10 @@ function App() {
         <ul>
           {list.length > 0 ?
             list.map((item) => (
-              <ListItem isFinished={item.finished} key={item.id}>
-                <Check onClick={() => finalizarTarefa(item.id)} />
+              <ListItem isFinished={item.finished} key={item._id}>
+                <Check onClick={() => finalizarTarefa(item._id, item.finished)} />
                 <li>{item.task}</li>
-                <Trash onClick={() => deletarItem(item.id)} />
+                <Trash onClick={() => deletarItem(item._id)} />
               </ListItem>
             ))
             :
